@@ -22,10 +22,14 @@ EMBEDDING_DIM = 384
 def upgrade() -> None:
     op.execute("CREATE EXTENSION IF NOT EXISTS vector")
 
-    name="document_status", create_type=False = postgresql.ENUM(
-        "pending", "processing", "ready", "failed", name="document_status"
+    # create_type=False: we create the enum type explicitly below
+    # (checkfirst), then reuse this same object in create_table. Without
+    # create_type=False, create_table() would *also* try to CREATE TYPE
+    # and fail with "type already exists".
+    document_status = postgresql.ENUM(
+        "pending", "processing", "ready", "failed", name="document_status", create_type=False
     )
-    name="document_status", create_type=False.create(op.get_bind(), checkfirst=True)
+    document_status.create(op.get_bind(), checkfirst=True)
 
     op.create_table(
         "documents",
@@ -33,7 +37,7 @@ def upgrade() -> None:
         sa.Column("filename", sa.String(length=512), nullable=False),
         sa.Column("content_type", sa.String(length=128), nullable=False),
         sa.Column("size_bytes", sa.Integer(), nullable=False, server_default="0"),
-        sa.Column("status", name="document_status", create_type=False, nullable=False, server_default="pending"),
+        sa.Column("status", document_status, nullable=False, server_default="pending"),
         sa.Column("error_message", sa.String(length=1024), nullable=True),
         sa.Column("chunk_count", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
