@@ -1,0 +1,13 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = ["alembic/versions", ".venv", "venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# B008: FastAPI's `Depends(...)` in argument defaults is the documented,
+# idiomatic pattern for dependency injection — not a real bug here.
+ignore = ["B008"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
