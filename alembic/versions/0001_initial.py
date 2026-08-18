@@ -60,12 +60,18 @@ def upgrade() -> None:
     op.create_index(
         "ix_document_chunks_document_id", "document_chunks", ["document_id"]
     )
-    # IVFFlat index for fast approximate cosine-similarity search once the
-    # table has meaningful data volume (works fine on an empty table too).
+    # HNSW index for approximate cosine-similarity search. Unlike IVFFlat,
+    # HNSW builds incrementally as rows are inserted and does not require
+    # pre-existing data to produce good recall — an IVFFlat index built on
+    # an empty table (as this table is, at migration time) clusters into a
+    # single degenerate list and can silently return zero rows for a
+    # genuinely dissimilar query vector, even though the row exists and a
+    # sequential scan finds it. Confirmed via EXPLAIN ANALYZE: an IVFFlat
+    # index scan returned rows=0 for a real query vector while a forced
+    # sequential scan on the same query correctly returned the row.
     op.execute(
         "CREATE INDEX ix_document_chunks_embedding "
-        "ON document_chunks USING ivfflat (embedding vector_cosine_ops) "
-        "WITH (lists = 100)"
+        "ON document_chunks USING hnsw (embedding vector_cosine_ops)"
     )
 
 
